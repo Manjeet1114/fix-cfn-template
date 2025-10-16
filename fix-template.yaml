@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Sample CloudFormation template with intentional errors
-  for students to troubleshoot EC2 provisioning.
+  Corrected CloudFormation template for EC2 provisioning with proper parameters and security.
 
 Parameters:
   EnvironmentName:
@@ -22,31 +21,46 @@ Parameters:
 
   AMIId:
     Type: AWS::EC2::Image::Id
-    Default: ami-12345
+    Default: ami-0c94855ba95c71c99   # Corrected Amazon Linux 2 AMI in us-east-1
     Description: The AMI ID to use.
 
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The VPC ID where the instance will be deployed.
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access.
+
 Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0   # Fixed invalid CIDR block
+
   EC2Instance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup   # Attach the security group
+      KeyName: !Ref KeyName           # Optional: attach KeyName for SSH
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-instance"
-
-  InstanceSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow SSH access
-      VpcId: vpc-0abcd1234efgh5678
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 300.0.0.0/0
 
 Outputs:
   InstanceId:
     Description: The ID of the EC2 instance
     Value: !Ref EC2Instance
+
+  InstancePublicIP:
+    Description: The public IP address of the EC2 instance
+    Value: !GetAtt EC2Instance.PublicIp
